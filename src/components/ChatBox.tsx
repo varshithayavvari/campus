@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Clock,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface ChatMessage {
@@ -37,6 +38,24 @@ interface ChatBoxProps {
   onOpen: () => void;
   initialWebhookUrl?: string;
 }
+
+export const sanitizeWebhookUrl = (url: string): string => {
+  if (!url) return '';
+  return url.trim().replace(/^["'`]+|["'`]+$/g, '').trim().replace(/\/+$/, '');
+};
+
+export const getProxyUrl = (rawUrl: string, useProxy: boolean): string => {
+  const clean = sanitizeWebhookUrl(rawUrl);
+  if (!useProxy) return clean;
+
+  try {
+    const urlObj = new URL(clean);
+    return `/api/n8n-proxy${urlObj.pathname}`;
+  } catch {
+    const path = clean.replace(/^https?:\/\/[^/]+/, '');
+    return `/api/n8n-proxy${path.startsWith('/') ? path : '/' + path}`;
+  }
+};
 
 const OLD_DEFAULT_WEBHOOK =
   'https://varshitha16.app.n8n.cloud/webhook/5add194e-cd98-4a61-86e9-f204cb66b461/chat';
@@ -60,15 +79,24 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
 }) => {
   const [webhookUrl, setWebhookUrl] = useState<string>(() => {
     const saved = localStorage.getItem('campusbites_chat_webhook');
-    if (!saved || saved === OLD_DEFAULT_WEBHOOK) {
-      localStorage.setItem('campusbites_chat_webhook', initialWebhookUrl);
-      return initialWebhookUrl;
+    if (
+      !saved ||
+      saved === OLD_DEFAULT_WEBHOOK ||
+      saved.includes('"') ||
+      saved.includes("'") ||
+      saved.includes('5add194e')
+    ) {
+      const cleanInitial = sanitizeWebhookUrl(initialWebhookUrl);
+      localStorage.setItem('campusbites_chat_webhook', cleanInitial);
+      return cleanInitial;
     }
-    return saved;
+    return sanitizeWebhookUrl(saved);
   });
   const [useProxy, setUseProxy] = useState<boolean>(() => {
     return localStorage.getItem('campusbites_chat_proxy') !== 'false';
   });
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = localStorage.getItem('campusbites_chat_history');
     if (saved) {
@@ -121,7 +149,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       setUnreadCount(0);
-      // Auto focus input
       setTimeout(() => inputRef.current?.focus(), 200);
     }
   }, [messages, isOpen]);
@@ -145,6 +172,52 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     localStorage.setItem('campusbites_chat_session_id', newSid);
   };
 
+  const handleSwitchToTestUrl = () => {
+    const clean = sanitizeWebhookUrl(webhookUrl);
+    const newUrl = clean.includes('/webhook-test/')
+      ? clean
+      : clean.replace('/webhook/', '/webhook-test/');
+    setWebhookUrl(newUrl);
+    localStorage.setItem('campusbites_chat_webhook', newUrl);
+    handleTestConnectionDirect(newUrl);
+  };
+
+  const handleSwitchToLiveUrl = () => {
+    const clean = sanitizeWebhookUrl(webhookUrl);
+    const newUrl = clean.replace('/webhook-test/', '/webhook/');
+    setWebhookUrl(newUrl);
+    localStorage.setItem('campusbites_chat_webhook', newUrl);
+    handleTestConnectionDirect(newUrl);
+  };
+
+  const handleTestConnectionDirect = async (urlToCheck?: string) => {
+    setConnectionStatus('testing');
+    setConnectionError(null);
+    try {
+      const clean = sanitizeWebhookUrl(urlToCheck || webhookUrl);
+      const target = getProxyUrl(clean, useProxy);
+      const res = await fetch(target, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sendMessage',
+          chatInput: 'ping',
+          sessionId: sessionId || 'test_health',
+        }),
+      });
+      if (res.ok) {
+        setConnectionStatus('success');
+      } else {
+        const text = await res.text();
+        setConnectionStatus('error');
+        setConnectionError(`Status ${res.status}: ${text.slice(0, 90)}`);
+      }
+    } catch (e: any) {
+      setConnectionStatus('error');
+      setConnectionError(e.message || 'Connection failed');
+    }
+  };
+
   const sendToWebhook = async (userText: string) => {
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: ChatMessage = {
@@ -157,9 +230,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
 
-    const targetUrl = useProxy
-      ? `/api/n8n-proxy/webhook/${webhookUrl.replace(/^https?:\/\/[^/]+\/webhook\//, '')}`
-      : webhookUrl;
+    const cleanUrl = sanitizeWebhookUrl(webhookUrl);
+    const targetUrl = getProxyUrl(cleanUrl, useProxy);
 
     const payload = {
       action: 'sendMessage',
@@ -173,7 +245,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     };
 
     try {
-      const response = await fetch(targetUrl, {
+      let response = await fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +254,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
         body: JSON.stringify(payload),
       });
 
-      const responseText = await response.text();
+      let responseText = await response.text();
       let responseJson: any = null;
       try {
         responseJson = JSON.parse(responseText);
@@ -190,16 +262,39 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
         // Not JSON
       }
 
+      // If proxy fetch returned a 404, try direct fetch once if proxy was enabled
+      if (!response.ok && response.status === 404 && useProxy) {
+        try {
+          const directResp = await fetch(cleanUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json, text/plain, */*',
+            },
+            body: JSON.stringify(payload),
+          });
+          if (directResp.ok) {
+            response = directResp;
+            responseText = await directResp.text();
+            try {
+              responseJson = JSON.parse(responseText);
+            } catch {}
+          }
+        } catch {
+          // direct failed (probably CORS), keep proxy response
+        }
+      }
+
       if (!response.ok) {
-        // Handle n8n specific 404 inactive workflow
-        if (response.status === 404 && responseJson?.hint) {
+        // Handle n8n 404
+        if (response.status === 404) {
           const botErrorMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
             sender: 'bot',
             isError: true,
             errorType: 'inactive_workflow',
-            errorHint: responseJson.hint,
-            text: `⚠️ **n8n Workflow Inactive or Not Registered**\n\nThe webhook URL is configured, but n8n returned: \n*"${responseJson.message || 'Webhook not registered'}"*\n\n### 💡 How to activate in n8n:\n1. Open your workflow in your **n8n editor** (${webhookUrl.replace(/\/webhook\/.*/, '')}).\n2. In the top-right corner, toggle the switch from **Inactive** to **Active**.\n3. Make sure your workflow starts with an **n8n Chat Trigger** node.\n*(If you are testing inside the editor canvas, use the test webhook URL /webhook-test/...)*`,
+            errorHint: responseJson?.hint || responseJson?.message,
+            text: `⚠️ **n8n Webhook Inactive or Not Registered (HTTP 404)**\n\nThe webhook URL is configured, but n8n returned: \n*"${responseJson?.message || 'The requested webhook is not registered.'}"*\n\n### 💡 Two Quick Solutions in n8n:\n1. **Activate the workflow**: In your **n8n editor**, check the toggle in the top-right corner. It must be turned to **Active** for the Production URL to respond.\n2. **Or Test URL Mode**: If you are actively editing nodes on the n8n canvas and clicking "Test workflow", you need the **Test Webhook URL** (\`/webhook-test/...\`). Use the ⚙️ Settings drawer above to switch to Test Mode or test the connection!`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           };
           setMessages((prev) => [...prev, botErrorMsg]);
@@ -235,7 +330,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
         } else if (typeof responseJson.message === 'string') {
           botResponse = responseJson.message;
         } else if (Array.isArray(responseJson)) {
-          // If n8n returns array of items [{ text: ... }]
           const first = responseJson[0];
           botResponse = first?.output || first?.text || first?.message || JSON.stringify(responseJson, null, 2);
         } else {
@@ -256,7 +350,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     } catch (err: any) {
       console.error('Chat webhook error:', err);
 
-      // Try direct fetch if proxy failed, or vice versa
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
@@ -470,25 +563,95 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div>
-                  <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-1">
-                    Webhook Endpoint URL:
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      Webhook Endpoint URL:
+                    </label>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {webhookUrl.includes('/webhook-test/') ? 'Mode: Test URL' : 'Mode: Production'}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={webhookUrl}
                     onChange={(e) => {
-                      setWebhookUrl(e.target.value);
-                      localStorage.setItem('campusbites_chat_webhook', e.target.value);
+                      const clean = sanitizeWebhookUrl(e.target.value);
+                      setWebhookUrl(clean);
+                      localStorage.setItem('campusbites_chat_webhook', clean);
                     }}
                     placeholder="https://...app.n8n.cloud/webhook/.../chat"
                     className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300">
+                {/* Quick Switch & Test Controls */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleTestConnectionDirect()}
+                    disabled={connectionStatus === 'testing'}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{connectionStatus === 'testing' ? 'Testing...' : 'Test Connection'}</span>
+                  </button>
+
+                  {webhookUrl.includes('/webhook-test/') ? (
+                    <button
+                      type="button"
+                      onClick={handleSwitchToLiveUrl}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 transition-colors"
+                    >
+                      Switch to Live URL (/webhook/)
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSwitchToTestUrl}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 transition-colors"
+                    >
+                      Switch to Test URL (/webhook-test/)
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWebhookUrl(DEFAULT_WEBHOOK_URL);
+                      setUseProxy(true);
+                      localStorage.setItem('campusbites_chat_webhook', DEFAULT_WEBHOOK_URL);
+                      localStorage.setItem('campusbites_chat_proxy', 'true');
+                      handleTestConnectionDirect(DEFAULT_WEBHOOK_URL);
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:underline font-semibold ml-auto"
+                  >
+                    Reset Default
+                  </button>
+                </div>
+
+                {/* Connection Test Feedback */}
+                {connectionStatus === 'success' && (
+                  <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Connected! Webhook is live and responding (HTTP 200).</span>
+                  </div>
+                )}
+                {connectionStatus === 'error' && (
+                  <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/80 text-[11px] text-rose-800 dark:text-rose-300 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span>Connection failed: {connectionError}</span>
+                    </div>
+                    <p className="text-[10px] text-rose-700/80 dark:text-rose-300/80">
+                      If 404, toggle your workflow in n8n from <strong>Inactive</strong> to <strong>Active</strong>, or click "Switch to Test URL" above.
+                    </p>
+                  </div>
+                )}
+
+                <div className="pt-1 border-t border-slate-200 dark:border-slate-800">
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300 text-[11px]">
                     <input
                       type="checkbox"
                       checked={useProxy}
@@ -500,19 +663,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
                     />
                     <span>Use Server Proxy (Prevents CORS errors)</span>
                   </label>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWebhookUrl(DEFAULT_WEBHOOK_URL);
-                      setUseProxy(true);
-                      localStorage.setItem('campusbites_chat_webhook', DEFAULT_WEBHOOK_URL);
-                      localStorage.setItem('campusbites_chat_proxy', 'true');
-                    }}
-                    className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-semibold"
-                  >
-                    Reset Default
-                  </button>
                 </div>
               </div>
             </div>

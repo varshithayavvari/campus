@@ -12,10 +12,68 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cabinet+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Official n8n Chatbot Integration Stylesheet -->
+    <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+    <style>
+      /* Ensure official n8n chat widget toggle is properly positioned above mobile nav */
+      :root {
+        --chat--color-primary: #d97706;
+        --chat--color-primary-shade-50: #b45309;
+        --chat--color-primary-tint-50: #f59e0b;
+      }
+      .chat-window-toggle, [class*="chat-window-toggle"] {
+        z-index: 50 !important;
+      }
+      @media (max-width: 768px) {
+        .chat-window-toggle, [class*="chat-window-toggle"] {
+          bottom: 74px !important;
+          right: 18px !important;
+        }
+        .chat-window, [class*="chat-window"] {
+          bottom: 80px !important;
+        }
+      }
+    </style>
   </head>
   <body class="bg-[#FBFBFA] dark:bg-[#121316] text-slate-800 dark:text-slate-100 antialiased font-sans transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Initialize Official n8n Chat Widget -->
+    <script type="module">
+      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+      try {
+        createChat({
+          webhookUrl: 'https://varshitha16.app.n8n.cloud/webhook/c2f039a7-720b-41fa-8cbe-394d28b15ee8/chat',
+          initialMessages: [
+            '👋 Hello! Welcome to CampusBites Dining Hall.',
+            'I am your AI dining assistant powered by n8n. Ask me anything about today\'s menu, lunch specials, prices, active coupons, or canteen timings!'
+          ],
+          i18n: {
+            en: {
+              title: 'CampusBites AI 🍽️',
+              subtitle: 'Campus Dining Concierge • Powered by n8n',
+              footer: '',
+              getStarted: 'New Conversation',
+              inputPlaceholder: 'Ask about food, prices, specials, or timings...',
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to initialize official n8n chat widget:', err);
+      }
+
+      window.openN8nChat = function() {
+        if (window.Chatbot && typeof window.Chatbot.open === 'function') {
+          window.Chatbot.open();
+        } else {
+          const btn = document.querySelector('.chat-window-toggle, [class*="chat-window-toggle"], [data-test-id="chat-toggle"]');
+          if (btn) btn.click();
+        }
+      };
+    </script>
   </body>
 </html>
 

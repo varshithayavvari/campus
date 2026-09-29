@@ -15,11 +15,11 @@ import { OrdersListModal } from './components/OrdersListModal';
 import { FavoritesModal } from './components/FavoritesModal';
 import { ProfileModal } from './components/ProfileModal';
 import { AboutSection } from './components/AboutSection';
+import { AIChatSection } from './components/AIChatSection';
 import { Footer } from './components/Footer';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { BackToTop } from './components/BackToTop';
 import { ToastContainer } from './components/Toast';
-import { ChatBox } from './components/ChatBox';
 import { Sparkles, Flame, SearchX } from 'lucide-react';
 
 export default function App() {
@@ -34,13 +34,12 @@ export default function App() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   // UI & Modal states
-  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'specials' | 'about'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'menu' | 'specials' | 'assistant' | 'about'>('home');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [ordersModalOpen, setOrdersModalOpen] = useState(false);
   const [favoritesModalOpen, setFavoritesModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [quickViewItem, setQuickViewItem] = useState<MenuItem | null>(null);
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
 
@@ -57,6 +56,7 @@ export default function App() {
   // Refs for smooth scrolling
   const menuRef = useRef<HTMLDivElement>(null);
   const specialsRef = useRef<HTMLDivElement>(null);
+  const aiAssistantRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
 
   // Helper: Toast Dispatcher
@@ -349,6 +349,11 @@ export default function App() {
     aboutRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const scrollToAssistant = () => {
+    setActiveTab('assistant');
+    aiAssistantRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const handleFocusSearch = () => {
     scrollToMenu();
     setTimeout(() => {
@@ -365,6 +370,8 @@ export default function App() {
       scrollToMenu();
     } else if (tab === 'specials') {
       scrollToSpecials();
+    } else if (tab === 'assistant') {
+      scrollToAssistant();
     } else if (tab === 'about') {
       scrollToAbout();
     }
@@ -378,6 +385,15 @@ export default function App() {
 
   // Today's Specials items
   const specialsItems = MENU_ITEMS.filter((item) => item.isSpecial);
+
+  // Trigger Official n8n Chatbot or scroll to in-page assistant
+  const handleOpenChat = () => {
+    if (typeof (window as any).openN8nChat === 'function') {
+      (window as any).openN8nChat();
+    } else {
+      scrollToAssistant();
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FBFBFA] dark:bg-[#121316] text-slate-900 dark:text-slate-100 transition-colors duration-200">
@@ -399,7 +415,7 @@ export default function App() {
         onOpenProfile={() => setProfileModalOpen(true)}
         onToggleTheme={toggleTheme}
         onFocusSearch={handleFocusSearch}
-        onOpenChat={() => setChatOpen(true)}
+        onOpenChat={handleOpenChat}
       />
 
       {/* Main Content Area */}
@@ -409,7 +425,7 @@ export default function App() {
         <Hero
           onExploreMenu={scrollToMenu}
           onViewSpecials={scrollToSpecials}
-          onOpenChat={() => setChatOpen(true)}
+          onOpenChat={handleOpenChat}
         />
 
         {/* 2. Offers & Promo Section */}
@@ -525,7 +541,15 @@ export default function App() {
           </div>
         </section>
 
-        {/* 5. About & Operational Information */}
+        {/* 5. Canteen AI Chatbot Concierge - Embedded Section */}
+        <div ref={aiAssistantRef}>
+          <AIChatSection
+            webhookUrl="https://varshitha16.app.n8n.cloud/webhook/c2f039a7-720b-41fa-8cbe-394d28b15ee8/chat"
+            onExploreMenu={scrollToMenu}
+          />
+        </div>
+
+        {/* 6. About & Operational Information */}
         <div ref={aboutRef}>
           <AboutSection />
         </div>
@@ -549,6 +573,7 @@ export default function App() {
         onOpenCart={() => setCartDrawerOpen(true)}
         onOpenOrders={() => setOrdersModalOpen(true)}
         onOpenFavorites={() => setFavoritesModalOpen(true)}
+        onOpenChat={handleOpenChat}
       />
 
       {/* Floating Back-To-Top Button */}
@@ -623,14 +648,6 @@ export default function App() {
         onAddToCart={handleAddToCart}
         onUpdateQuantity={handleUpdateQuantity}
         onToggleFavorite={handleToggleFavorite}
-      />
-
-      {/* Canteen AI Chat Assistant (n8n Webhook Connected) */}
-      <ChatBox
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        onOpen={() => setChatOpen(true)}
-        initialWebhookUrl="https://varshitha16.app.n8n.cloud/webhook/c2f039a7-720b-41fa-8cbe-394d28b15ee8/chat"
       />
 
     </div>

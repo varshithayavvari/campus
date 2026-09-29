@@ -89,6 +89,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               Today's Specials
             </button>
             <button
+              onClick={() => handleNavClick('assistant')}
+              className={`inline-flex items-center gap-1.5 transition-colors hover:text-amber-600 dark:hover:text-amber-400 ${
+                activeTab === 'assistant' ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''
+              }`}
+            >
+              <span>AI Chatbot</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </button>
+            <button
               onClick={onOpenOrders}
               className="flex items-center gap-1.5 transition-colors hover:text-amber-600 dark:hover:text-amber-400"
             >

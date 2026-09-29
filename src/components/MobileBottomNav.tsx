@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Utensils, Clock, Heart, ShoppingBag } from 'lucide-react';
+import { Home, Utensils, Clock, Heart, ShoppingBag, Bot } from 'lucide-react';
 
 interface MobileBottomNavProps {
   activeTab: string;
@@ -10,6 +10,7 @@ interface MobileBottomNavProps {
   onOpenCart: () => void;
   onOpenOrders: () => void;
   onOpenFavorites: () => void;
+  onOpenChat?: () => void;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -21,6 +22,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenCart,
   onOpenOrders,
   onOpenFavorites,
+  onOpenChat,
 }) => {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 shadow-lg">
@@ -41,7 +43,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {/* Menu */}
         <button
           onClick={() => onNavigate('menu')}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[10px] font-semibold transition-colors ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-semibold transition-colors ${
             activeTab === 'menu'
               ? 'text-amber-600 dark:text-amber-400'
               : 'text-slate-500 dark:text-slate-400'
@@ -49,6 +51,22 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         >
           <Utensils className="w-5 h-5 mb-0.5" />
           <span>Menu</span>
+        </button>
+
+        {/* AI Assistant Chatbot */}
+        <button
+          onClick={onOpenChat || (() => onNavigate('assistant'))}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-semibold transition-colors ${
+            activeTab === 'assistant'
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-amber-700 dark:text-amber-300'
+          }`}
+        >
+          <div className="relative">
+            <Bot className="w-5 h-5 mb-0.5" />
+            <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </div>
+          <span>AI Chat</span>
         </button>
 
         {/* Orders */}
