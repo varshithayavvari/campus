@@ -352,10 +352,14 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
       {/* Floating Trigger Button (When Closed) */}
       {!isOpen && (
         <div className="fixed bottom-20 md:bottom-8 right-5 z-40 flex items-center gap-3">
-          {/* Subtle tooltip invite banner */}
-          <div className="hidden lg:flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 shadow-xl text-xs font-semibold text-slate-800 dark:text-slate-200 animate-bounce duration-1000">
+          {/* Tooltip invite banner */}
+          <div
+            onClick={onOpen}
+            className="flex items-center gap-1.5 sm:gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-amber-300/80 dark:border-amber-700/60 shadow-xl text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-all select-none"
+          >
             <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-            <span>Ask Canteen AI</span>
+            <span className="hidden sm:inline">Ask Canteen AI</span>
+            <span className="sm:hidden">Ask AI</span>
           </div>
 
           <button

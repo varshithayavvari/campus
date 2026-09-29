@@ -406,7 +406,11 @@ export default function App() {
       <main className="flex-1">
         
         {/* 1. Hero Section */}
-        <Hero onExploreMenu={scrollToMenu} onViewSpecials={scrollToSpecials} />
+        <Hero
+          onExploreMenu={scrollToMenu}
+          onViewSpecials={scrollToSpecials}
+          onOpenChat={() => setChatOpen(true)}
+        />
 
         {/* 2. Offers & Promo Section */}
         <OffersSection

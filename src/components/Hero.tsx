@@ -1,13 +1,14 @@
 import React from 'react';
 import { HERO_IMAGE, CANTEEN_INFO } from '../data/menuData';
-import { Sparkles, ArrowRight, Clock, ShieldCheck, MapPin, Flame } from 'lucide-react';
+import { Sparkles, ArrowRight, Clock, ShieldCheck, MapPin, Flame, MessageSquare } from 'lucide-react';
 
 interface HeroProps {
   onExploreMenu: () => void;
   onViewSpecials: () => void;
+  onOpenChat?: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onViewSpecials }) => {
+export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onViewSpecials, onOpenChat }) => {
   return (
     <section className="relative overflow-hidden pt-6 pb-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,6 +55,18 @@ export const Hero: React.FC<HeroProps> = ({ onExploreMenu, onViewSpecials }) => 
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>View Today's Specials</span>
               </button>
+
+              {onOpenChat && (
+                <button
+                  onClick={onOpenChat}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-bold text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700/60 active:scale-95 rounded-xl transition-all duration-150 cursor-pointer shadow-sm"
+                  title="Ask Canteen AI Assistant"
+                >
+                  <MessageSquare className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>Ask AI Assistant</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </button>
+              )}
             </div>
 
             {/* Trust Markers / Fast Stats */}
