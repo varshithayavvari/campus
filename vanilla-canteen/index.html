@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusBites - College Canteen Food Ordering</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header>
+    <div class="container navbar">
+      <a href="#" class="logo">Campus<span>Bites</span></a>
+      <ul class="nav-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#menu">Menu</a></li>
+        <li><a href="#specials">Today's Specials</a></li>
+        <li><a href="#orders">Orders</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="btn-icon" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+        <button class="btn-primary" onclick="toggleCartDrawer(true)">
+          🛒 Tray (<span id="cart-count">0</span>)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="container">
+    <section class="hero" id="home">
+      <div>
+        <small style="color:var(--primary); font-weight:700">★ CAMPUS CANTEEN OPEN NOW</small>
+        <h1>Good Food.<br>Great Campus.</h1>
+        <p>Order your favorite campus meals quickly and enjoy more time with friends.</p>
+        <a href="#menu" class="btn-primary" style="text-decoration:none; padding:12px 24px;">Explore Menu</a>
+      </div>
+      <div>
+        <img src="https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800" alt="Campus Canteen Food">
+      </div>
+    </section>
+
+    <!-- Menu Section with Filters -->
+    <section id="menu" style="padding: 32px 0;">
+      <h2 style="font-size:2rem; margin-bottom:16px;">Canteen Menu</h2>
+      
+      <!-- Search Input -->
+      <input type="text" id="search-input" placeholder="Search dishes (e.g. Dosa, Chai, Noodles)..." style="width:100%; max-width:400px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px; background:var(--surface); color:var(--text-main);">
+
+      <!-- Category Filter Tabs -->
+      <div class="categories">
+        <button class="category-tab active" data-category="all">All</button>
+        <button class="category-tab" data-category="breakfast">Breakfast</button>
+        <button class="category-tab" data-category="lunch">Lunch</button>
+        <button class="category-tab" data-category="snacks">Snacks</button>
+        <button class="category-tab" data-category="beverages">Beverages</button>
+        <button class="category-tab" data-category="desserts">Desserts</button>
+      </div>
+
+      <!-- Food Grid -->
+      <div id="food-grid" class="food-grid"></div>
+    </section>
+  </main>
+
+  <!-- Slide-out Cart Drawer -->
+  <div id="cart-drawer" class="cart-drawer">
+    <div class="cart-header">
+      <h3>Your Food Tray</h3>
+      <button class="btn-icon" onclick="toggleCartDrawer(false)">✕</button>
+    </div>
+    <div id="cart-items-list" class="cart-body"></div>
+    <div class="cart-footer">
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-weight:700;">
+        <span>Total:</span>
+        <span id="cart-grand-total">₹0</span>
+      </div>
+      <button class="btn-primary" style="width:100%; justify-content:center;" onclick="alert('Order placed successfully! Token #CB10245 assigned.')">Proceed to Checkout</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

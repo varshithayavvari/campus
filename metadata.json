@@ -1,0 +1,6 @@
+{
+  "name": "CampusBites - College Canteen Food Ordering",
+  "description": "A modern, responsive digital canteen food ordering platform for college students with real-time order tracking, customizable meals, and quick pickup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
