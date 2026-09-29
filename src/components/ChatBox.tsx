@@ -38,8 +38,11 @@ interface ChatBoxProps {
   initialWebhookUrl?: string;
 }
 
-const DEFAULT_WEBHOOK_URL =
+const OLD_DEFAULT_WEBHOOK =
   'https://varshitha16.app.n8n.cloud/webhook/5add194e-cd98-4a61-86e9-f204cb66b461/chat';
+
+const DEFAULT_WEBHOOK_URL =
+  'https://varshitha16.app.n8n.cloud/webhook/c2f039a7-720b-41fa-8cbe-394d28b15ee8/chat';
 
 const QUICK_PROMPTS = [
   '🍛 What are today\'s lunch specials?',
@@ -56,7 +59,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
   initialWebhookUrl = DEFAULT_WEBHOOK_URL,
 }) => {
   const [webhookUrl, setWebhookUrl] = useState<string>(() => {
-    return localStorage.getItem('campusbites_chat_webhook') || initialWebhookUrl;
+    const saved = localStorage.getItem('campusbites_chat_webhook');
+    if (!saved || saved === OLD_DEFAULT_WEBHOOK) {
+      localStorage.setItem('campusbites_chat_webhook', initialWebhookUrl);
+      return initialWebhookUrl;
+    }
+    return saved;
   });
   const [useProxy, setUseProxy] = useState<boolean>(() => {
     return localStorage.getItem('campusbites_chat_proxy') !== 'false';

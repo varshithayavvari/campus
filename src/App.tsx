@@ -626,7 +626,7 @@ export default function App() {
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
         onOpen={() => setChatOpen(true)}
-        initialWebhookUrl="https://varshitha16.app.n8n.cloud/webhook/5add194e-cd98-4a61-86e9-f204cb66b461/chat"
+        initialWebhookUrl="https://varshitha16.app.n8n.cloud/webhook/c2f039a7-720b-41fa-8cbe-394d28b15ee8/chat"
       />
 
     </div>
